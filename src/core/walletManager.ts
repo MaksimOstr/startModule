@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-class WalletManager {
+export class WalletManager {
     private wallet: Wallet;
 
     constructor(privateKey: string) {
