@@ -1,12 +1,16 @@
 export class TokenAmount {
-    readonly raw: bigint;
-    readonly decimals: number;
-    readonly symbol?: string;
+    private readonly _raw: bigint;
+    private readonly decimals: number;
+    private readonly symbol?: string;
 
     constructor(raw: bigint, decimals: number, symbol?: string) {
-        this.raw = raw;
+        this._raw = raw;
         this.decimals = decimals;
         this.symbol = symbol;
+    }
+
+    get raw(): bigint {
+        return this.raw;
     }
 
     static fromHuman(amount: string, decimals: number, symbol?: string): TokenAmount {

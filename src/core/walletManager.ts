@@ -1,5 +1,6 @@
-import { getAddress, Transaction, TypedDataField, Wallet } from 'ethers';
+import { getAddress, TypedDataField, Wallet } from 'ethers';
 import dotenv from 'dotenv';
+import { TransactionRequest } from './types/TransactionRequest';
 
 dotenv.config();
 
@@ -37,15 +38,15 @@ export class WalletManager {
         types: Record<string, Array<TypedDataField>>,
         value: object,
     ): Promise<string> {
-        if (!domain || !types || Object.keys.length === 0 || !value) {
+        if (!domain || !types || Object.keys(types).length === 0 || !value) {
             throw new Error('Invalid domain, types, or value for typed data');
         }
 
         return this.wallet.signTypedData(domain, types, value);
     }
 
-    signTransaction(tx: Transaction): Promise<string> {
-        return this.wallet.signTransaction(tx);
+    signTransaction(tx: TransactionRequest): Promise<string> {
+        return this.wallet.signTransaction({ ...tx });
     }
 
     toString(): string {
