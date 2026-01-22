@@ -10,11 +10,12 @@ export class TokenAmount {
     }
 
     get raw(): bigint {
-        return this.raw;
+        return this._raw;
     }
 
-    static fromHuman(amount: string, decimals: number, symbol?: string): TokenAmount {
-        const [whole, fraction = ''] = amount.split('.');
+    static fromHuman(amount: string | number, decimals: number, symbol?: string): TokenAmount {
+        const amountStr = typeof amount === 'number' ? amount.toString() : amount;
+        const [whole, fraction = ''] = amountStr.split('.');
         const normalizedFraction = fraction.padEnd(decimals, '0').slice(0, decimals);
         const raw = BigInt(whole) * 10n ** BigInt(decimals) + BigInt(normalizedFraction);
         return new TokenAmount(raw, decimals, symbol);
@@ -35,9 +36,10 @@ export class TokenAmount {
     }
 
     mul(factor: number): TokenAmount {
-        const factorStr = factor.toString().replace('.', '');
-        const factorDecimals = factorStr.length - factor.toString().indexOf('.') - 1 || 0;
-        const multiplier = BigInt(factorStr);
+        const factorStr = factor.toString();
+        const decimalIndex = factorStr.indexOf('.');
+        const factorDecimals = decimalIndex === -1 ? 0 : factorStr.length - decimalIndex - 1;
+        const multiplier = BigInt(factorStr.replace('.', ''));
         const resultRaw = (this.raw * multiplier) / 10n ** BigInt(factorDecimals);
         return new TokenAmount(resultRaw, this.decimals, this.symbol);
     }
