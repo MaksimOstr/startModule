@@ -6,9 +6,9 @@ export enum Priority {
 
 export class GasPrice {
     private _baseFee: bigint;
-    private priorityFeeLow: bigint;
-    private priorityFeeMedium: bigint;
-    private priorityFeeHigh: bigint;
+    private _priorityFeeLow: bigint;
+    private _priorityFeeMedium: bigint;
+    private _priorityFeeHigh: bigint;
 
     constructor(
         baseFee: bigint,
@@ -17,13 +17,25 @@ export class GasPrice {
         priorityFeeHigh: bigint,
     ) {
         this._baseFee = baseFee;
-        this.priorityFeeLow = priorityFeeLow;
-        this.priorityFeeMedium = priorityFeeMedium;
-        this.priorityFeeHigh = priorityFeeHigh;
+        this._priorityFeeLow = priorityFeeLow;
+        this._priorityFeeMedium = priorityFeeMedium;
+        this._priorityFeeHigh = priorityFeeHigh;
     }
 
     get baseFee() {
         return this._baseFee;
+    }
+
+    get priorityFeeLow() {
+        return this._priorityFeeLow;
+    }
+
+    get priorityFeeMedium() {
+        return this._priorityFeeMedium;
+    }
+
+    get priorityFeeHigh() {
+        return this._priorityFeeHigh;
     }
 
     getPriorityFee(priority: Priority = Priority.MEDIUM): bigint {

@@ -87,7 +87,7 @@ export class ChainClient {
             const receipt = await this.getReceipt(txHash);
             if (receipt) {
                 const duration = Date.now() - start;
-                console.log(`[ChainClient] Receipt received for ${txHash} after ${duration}ms`);
+                console.log(`[ChainClient] Receipt received for ${txHash} after ${duration} ms`);
                 return receipt;
             }
             await new Promise((r) => setTimeout(r, pollInterval * 1000));
