@@ -10,7 +10,13 @@ import { TokenAmount } from '../core/types/TokenAmount';
 import { TransactionReceipt } from '../core/types/TransactionReceipt';
 import { GasPrice } from './types/GasPrice';
 import { TransactionRequest } from '../core/types/TransactionRequest';
-import { InsufficientFunds, NonceTooLow, ReplacementUnderpriced, RPCError } from './Errors';
+import {
+    ChainError,
+    InsufficientFunds,
+    NonceTooLow,
+    ReplacementUnderpriced,
+    RPCError,
+} from './Errors';
 
 export class ChainClient {
     private providers: JsonRpcProvider[];
@@ -76,13 +82,18 @@ export class ChainClient {
         pollInterval: number = 1.0,
     ): Promise<TransactionReceipt> {
         const start = Date.now();
-        while (Date.now() - start < timeout) {
+        console.log(`[ChainClient] Start waiting for receipt: ${txHash}, timeout=${timeout}s`);
+        while (Date.now() - start < timeout * 1000) {
             const receipt = await this.getReceipt(txHash);
-            if (receipt) return receipt;
-            await new Promise((r) => setTimeout(r, pollInterval));
+            if (receipt) {
+                const duration = Date.now() - start;
+                console.log(`[ChainClient] Receipt received for ${txHash} after ${duration}ms`);
+                return receipt;
+            }
+            await new Promise((r) => setTimeout(r, pollInterval * 1000));
         }
 
-        throw new Error(`Transaction ${txHash} not confirmed in time`);
+        throw new ChainError(`Transaction ${txHash} not confirmed in time`);
     }
 
     getTransaction(txHash: string) {
@@ -120,10 +131,20 @@ export class ChainClient {
         let lastError: unknown;
         for (let attempt = 0; attempt < this.maxRetries; attempt++) {
             const provider = this.providers[attempt % this.providers.length];
+            const start = Date.now();
             try {
-                return await fn(provider);
+                const result = await fn(provider);
+                const duration = Date.now() - start;
+
+                console.log(`[ChainClient] Attempt ${attempt + 1} succeeded in ${duration}ms`);
+
+                return result;
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } catch (err: any) {
+                const duration = Date.now() - start;
+                console.error(
+                    `[ChainClient] Attempt ${attempt + 1} failed in ${duration}ms: ${err?.message ?? err}`,
+                );
                 lastError = err;
 
                 const code = err?.code;
@@ -145,7 +166,7 @@ export class ChainClient {
                 }
 
                 if (code === 'CALL_EXCEPTION' || message.includes('execution reverted')) {
-                    throw new RPCError(`Execution Reverted: ${message}`, -32000);
+                    throw new RPCError(`Execution Reverted: ${message}`);
                 }
 
                 if (attempt < this.maxRetries - 1) {

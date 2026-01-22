@@ -11,9 +11,9 @@ export class WalletManager {
         this.wallet = new Wallet(privateKey);
     }
 
-    public static fromEnv(): WalletManager {
-        const key = process.env.PRIVATE_KEY;
-        if (!key) throw new Error('PRIVATE_KEY is not set');
+    public static fromEnv(envVar: string = 'PRIVATE_KEY'): WalletManager {
+        const key = process.env[envVar];
+        if (!key) throw new Error(`${envVar} is not set`);
 
         return new WalletManager(key);
     }
