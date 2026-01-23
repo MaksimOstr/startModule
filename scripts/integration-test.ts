@@ -23,7 +23,7 @@ const chainClient = new ChainClient([process.env.SEPOLIA_API_URL!]);
 
     const txBuilder = await new TransactionBuilder(chainClient, walletManager)
         .to(walletAddress)
-        .value(TokenAmount.fromHuman('0', 18, 'ETH'))
+        .value(TokenAmount.fromHuman('0.0001', 18, 'ETH'))
         .nonce(nonce)
         .withGasEstimate()
         .then((builder) => builder.withGasPrice(Priority.MEDIUM));
@@ -34,7 +34,6 @@ const chainClient = new ChainClient([process.env.SEPOLIA_API_URL!]);
     console.log('Max Priority Fee:     ', tx.maxPriorityFee?.toString());
 
     const signedTx = await walletManager.signTransaction(tx);
-    console.log('Signed Transaction:   ', signedTx);
 
     const parsedTransaction = ethers.Transaction.from(signedTx);
     const signerAddress = parsedTransaction.from;

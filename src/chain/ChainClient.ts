@@ -126,7 +126,7 @@ export class ChainClient {
         );
     }
 
-    call(tx: TransactionRequest, block: string = 'latest') {
+    call(tx: TransactionRequest, block: string = 'latest'): Promise<string> {
         const txWithBlock: EtherTransactionRequest = {
             ...tx,
             blockTag: block,
