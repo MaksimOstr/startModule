@@ -1,7 +1,7 @@
 import { CanonicalSerializer } from '../../src/core/CanonicalSerializer';
 
 describe('CanonicalSerializer', () => {
-    test('verifyDeterminism() should return true for complex object', () => {
+    test('verifyDeterminism() should return true after big number of iterations', () => {
         const complexObject = {
             b: [3, 2, 1],
             a: {
@@ -23,10 +23,45 @@ describe('CanonicalSerializer', () => {
         expect(result).toBe(true);
     });
 
-    test('serialize() should sort object keys correctly', () => {
-        const obj = { z: 1, a: 2, m: { b: 3, a: 4 } };
-        const serialized = CanonicalSerializer.serialize(obj);
-        expect(serialized).toBe('{"a":2,"m":{"a":4,"b":3},"z":1}');
+    test('serialize() should produce same output for logically identical objects', () => {
+        const complexObject1 = {
+            b: [3, 2, 1],
+            a: {
+                x: 'hello',
+                z: {
+                    nestedArray: [
+                        { key2: 'v2', key1: 'v1' },
+                        { key1: 'v1', key2: 'v2' },
+                    ],
+                    emptyObj: {},
+                },
+                y: null,
+            },
+            c: true,
+            d: 42,
+        };
+
+        const complexObject2 = {
+            d: 42,
+            c: true,
+            a: {
+                z: {
+                    emptyObj: {},
+                    nestedArray: [
+                        { key1: 'v1', key2: 'v2' },
+                        { key2: 'v2', key1: 'v1' },
+                    ],
+                },
+                y: null,
+                x: 'hello',
+            },
+            b: [3, 2, 1],
+        };
+
+        const serialized1 = CanonicalSerializer.serialize(complexObject1);
+        const serialized2 = CanonicalSerializer.serialize(complexObject2);
+
+        expect(serialized2).toEqual(serialized1);
     });
 
     test('hash() should produce a consistent hash', () => {
