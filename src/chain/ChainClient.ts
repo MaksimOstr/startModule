@@ -35,15 +35,19 @@ export class ChainClient {
     }
 
     async getBalance(address: Address): Promise<TokenAmount> {
-        const balance: bigint = await this.withRetry((provider) =>
-            provider.getBalance(address.checksum),
+        const balance: bigint = await this.withRetry(
+            (provider) => provider.getBalance(address.checksum),
+            'getBalance',
         );
 
         return new TokenAmount(balance, 18, 'ETH');
     }
 
     getNonce(address: Address, block: string = 'pending') {
-        return this.withRetry((provider) => provider.getTransactionCount(address.checksum, block));
+        return this.withRetry(
+            (provider) => provider.getTransactionCount(address.checksum, block),
+            'getNonce',
+        );
     }
 
     getGasPrice(): Promise<GasPrice> {
@@ -62,18 +66,18 @@ export class ChainClient {
                 fee.maxPriorityFeePerGas,
                 (fee.maxPriorityFeePerGas * 12n) / 10n,
             );
-        });
+        }, 'getGasPrice');
     }
 
     estimateGas(tx: TransactionRequest): Promise<bigint> {
-        return this.withRetry((provider) => provider.estimateGas({ ...tx }));
+        return this.withRetry((provider) => provider.estimateGas({ ...tx }), 'estimateGas');
     }
 
     sendTransaction(signedTransaction: string): Promise<string> {
         return this.withRetry(async (provider) => {
             const response = await provider.broadcastTransaction(signedTransaction);
             return response.hash;
-        });
+        }, 'sendTransaction');
     }
 
     async waitForReceipt(
@@ -84,7 +88,7 @@ export class ChainClient {
         const start = Date.now();
         console.log(`[ChainClient] Start waiting for receipt: ${txHash}, timeout=${timeout}s`);
         while (Date.now() - start < timeout * 1000) {
-            const receipt = await this.getReceipt(txHash);
+            const receipt = await this.getReceipt(txHash, false);
             if (receipt) {
                 const duration = Date.now() - start;
                 console.log(`[ChainClient] Receipt received for ${txHash} after ${duration} ms`);
@@ -97,25 +101,29 @@ export class ChainClient {
     }
 
     getTransaction(txHash: string) {
-        return this.withRetry((provider) => provider.getTransaction(txHash));
+        return this.withRetry((provider) => provider.getTransaction(txHash), 'getTransaction');
     }
 
-    getReceipt(txHash: string): Promise<TransactionReceipt | null> {
-        return this.withRetry(async (provider) => {
-            const receipt: EthersTransactionReceipt | null =
-                await provider.getTransactionReceipt(txHash);
+    getReceipt(txHash: string, logSuccess: boolean = true): Promise<TransactionReceipt | null> {
+        return this.withRetry(
+            async (provider) => {
+                const receipt: EthersTransactionReceipt | null =
+                    await provider.getTransactionReceipt(txHash);
 
-            if (!receipt) return null;
+                if (!receipt) return null;
 
-            return new TransactionReceipt({
-                txHash: receipt.hash,
-                blockNumber: receipt.blockNumber,
-                status: receipt.status === 1,
-                gasUsed: receipt.gasUsed,
-                effectiveGasPrice: receipt.gasPrice,
-                logs: receipt.logs,
-            });
-        });
+                return new TransactionReceipt({
+                    txHash: receipt.hash,
+                    blockNumber: receipt.blockNumber,
+                    status: receipt.status === 1,
+                    gasUsed: receipt.gasUsed,
+                    effectiveGasPrice: receipt.gasPrice,
+                    logs: receipt.logs,
+                });
+            },
+            'getReceipt',
+            logSuccess,
+        );
     }
 
     call(tx: TransactionRequest, block: string = 'latest') {
@@ -124,10 +132,14 @@ export class ChainClient {
             blockTag: block,
         };
 
-        return this.withRetry((provider) => provider.call(txWithBlock));
+        return this.withRetry((provider) => provider.call(txWithBlock), 'call');
     }
 
-    private async withRetry<T>(fn: (provider: JsonRpcProvider) => Promise<T>): Promise<T> {
+    private async withRetry<T>(
+        fn: (provider: JsonRpcProvider) => Promise<T>,
+        action: string = 'unknown_action',
+        logSuccess: boolean = true,
+    ): Promise<T> {
         let lastError: unknown;
         for (let attempt = 0; attempt < this.maxRetries; attempt++) {
             const provider = this.providers[attempt % this.providers.length];
@@ -136,15 +148,15 @@ export class ChainClient {
                 const result = await fn(provider);
                 const duration = Date.now() - start;
 
-                console.log(`[ChainClient] Attempt ${attempt + 1} succeeded in ${duration}ms`);
+                if (logSuccess) {
+                    console.log(
+                        `[ChainClient] [${action}] succeeded in ${duration}ms (attempt ${attempt + 1})`,
+                    );
+                }
 
                 return result;
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } catch (err: any) {
-                const duration = Date.now() - start;
-                console.error(
-                    `[ChainClient] Attempt ${attempt + 1} failed in ${duration}ms: ${err?.message ?? err}`,
-                );
                 lastError = err;
 
                 const code = err?.code;

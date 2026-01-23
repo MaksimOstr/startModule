@@ -11,25 +11,49 @@ export interface TransactionReceiptParams {
 }
 
 export class TransactionReceipt {
-    private txHash: string;
-    private blockNumber: number;
-    private status: boolean;
-    private gasUsed: bigint;
-    private effectiveGasPrice: bigint;
-    private logs: Web3Receipt['logs'];
+    private _txHash: string;
+    private _blockNumber: number;
+    private _status: boolean;
+    private _gasUsed: bigint;
+    private _effectiveGasPrice: bigint;
+    private _logs: Web3Receipt['logs'];
 
     constructor(params: TransactionReceiptParams) {
-        this.txHash = params.txHash;
-        this.blockNumber = params.blockNumber;
-        this.status = params.status;
-        this.gasUsed = params.gasUsed;
-        this.effectiveGasPrice = params.effectiveGasPrice;
-        this.logs = params.logs;
+        this._txHash = params.txHash;
+        this._blockNumber = params.blockNumber;
+        this._status = params.status;
+        this._gasUsed = params.gasUsed;
+        this._effectiveGasPrice = params.effectiveGasPrice;
+        this._logs = params.logs;
     }
 
     get txFee(): TokenAmount {
-        const feeRaw = this.gasUsed * this.effectiveGasPrice;
+        const feeRaw = this._gasUsed * this._effectiveGasPrice;
         return new TokenAmount(feeRaw, 18, 'ETH');
+    }
+
+    get txHash(): string {
+        return this._txHash;
+    }
+
+    get blockNumber(): number {
+        return this._blockNumber;
+    }
+
+    get status(): boolean {
+        return this._status;
+    }
+
+    get gasUsed(): bigint {
+        return this._gasUsed;
+    }
+
+    get effectiveGasPrice(): bigint {
+        return this._effectiveGasPrice;
+    }
+
+    get logs(): Web3Receipt['logs'] {
+        return this._logs;
     }
 
     static fromWeb3(receipt: Web3Receipt): TransactionReceipt {

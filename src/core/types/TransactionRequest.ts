@@ -30,11 +30,11 @@ export class TransactionRequest {
         this._gasLimit = params.gasLimit;
         this._maxFeePerGas = params.maxFeePerGas;
         this._maxPriorityFee = params.maxPriorityFee;
-        this._chainId = params.chainId ?? 1;
+        this._chainId = params.chainId;
     }
 
     get to(): Address {
-        return this.to;
+        return this._to;
     }
     set to(value: Address) {
         this._to = value;

@@ -14,7 +14,6 @@ export class TransactionBuilder {
     private _gasLimit?: bigint;
     private _maxFeePerGas?: bigint;
     private _maxPriorityFee?: bigint;
-    private _chainId?: number;
 
     constructor(
         private client: ChainClient,
@@ -43,11 +42,6 @@ export class TransactionBuilder {
 
     gasLimit(limit: bigint): this {
         this._gasLimit = limit;
-        return this;
-    }
-
-    chainId(id: number): this {
-        this._chainId = id;
         return this;
     }
 
@@ -82,7 +76,7 @@ export class TransactionBuilder {
             gasLimit: this._gasLimit,
             maxFeePerGas: this._maxFeePerGas,
             maxPriorityFee: this._maxPriorityFee,
-            chainId: this._chainId ?? 1,
+            chainId: 11155111,
         });
     }
 
