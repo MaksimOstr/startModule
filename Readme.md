@@ -135,3 +135,4 @@ Sold:      0.0001 ETH (Native)
 * Retry logic with exponential backoff was implemented in **ChainClient** to ensure reliable behaviour during RPC instability
 * **TransactionBuilder** : convenient builder for transactions
 * **WalletManager** : a wallet wrapper for secure and convenient wallet management
+* **TokenAmount** : handles numbers with decimal points correctly, ensuring accurate representation of fractional values
