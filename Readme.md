@@ -1,41 +1,61 @@
-## Trading system
+# Trading System
 
 ## Project Structure
 
-- ```core/``` : core logic and basic types.
-   - ```WalletManager``` : class for secure and convenient wallet management
-   - ```CanonicalSerializer``` : Deterministic JSON serializer.
-- ```chain/``` - blockchain interaction classes
-   - ```ChainClient``` - RPC client with methods for blockchain operations.
-   - ```TransactionBuilder``` : A class for constructing and preparing transactions
+```
+core/      # core logic and basic types
+chain/     # blockchain interaction classes
+```
 
-## Quick start
+### core/
 
-1. Clone repository:
-   ```
-   git clone <repository_url>
-   ```
+* **WalletManager** : class for secure and convenient wallet management
+* **CanonicalSerializer** : Deterministic JSON serializer
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Create `.env` file in the root folder and set the environment variables specified in `.env.example`
+### chain/
 
-4. Start application:
-   ```bash
-   npm run start
-   ```
+* **ChainClient** : RPC client with methods for blockchain operations
+* **TransactionBuilder** : A class for constructing and preparing transactions
+* **TransactionAnalyzer**: transaction analysis tool
+
+---
+
+## Quick Start
+
+### 1. Clone repository
+
+```
+git clone <repository_url>
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Environment setup
+
+Create a `.env` file in the root folder and set the environment variables specified in `.env.example`
+
+### 4. Start application
+
+```bash
+npm run start
+```
+
+---
 
 ## Usage
 
- - Run integration test: 
+### Run integration test
 
-   ```bash
-   ts-node scripts/integration-test.ts
-   ```
+```bash
+ts-node scripts/integration-test.ts
+```
 
-- Expected output:
+#### Expected output
+
 ```
 ================ INTEGRATION TEST =================
 Wallet Address:        0xC7Ff5013Db67Ed46E5fa87eEc79127496838FdE9
@@ -64,9 +84,54 @@ Logs Count:            0
 =======================================================
 ```
 
+---
 
+### Run transaction analyzer
+
+```bash
+ts-node .\src\chain\TransactionAnalyzer.ts <txHash>
+```
+
+#### Expected output
+
+```
+Transaction Analysis
+====================
+Hash:           0x3e5ecdfeba7c8532ea10c4ef6e99f83745117ed6dbe9e587eeaae52d45ef9973
+Block:          10107427
+Timestamp:      Fri, 23 Jan 2026 17:23:36 GMT
+Status:         SUCCESS
+
+From:           0xC7Ff5013Db67Ed46E5fa87eEc79127496838FdE9
+To:             0xC7Ff5013Db67Ed46E5fa87eEc79127496838FdE9
+Value:          0.0001 ETH
+
+Gas Analysis
+------------
+Gas Limit:       64551
+Gas Used:        21000 (32.53%)
+Base Fee:        0.986218306 gwei
+Priority Fee:    0.001439189 gwei
+Effective Price: 0.987657495 gwei
+Transaction Fee: 0.000020740807395 ETH
+
+Function Called
+---------------
+Native ETH Transfer
+
+Token Transfers
+---------------
+No ERC-20 transfers found
+
+Swap Summary
+------------
+Sold:      0.0001 ETH (Native)
+```
+
+---
 
 ## Features
- - Retry logic with exponential backoff was implemented in ```ChainClient``` to ensure reliable behaviour during RPC instability
- - ```TransactionBuilder``` - convenient builder for transactions.
- - ```WalletManager``` — a wallet wrapper for secure and convenient wallet management.
+
+* Retry logic with exponential backoff was implemented in **ChainClient** to ensure reliable behaviour during RPC instability
+* **TransactionBuilder** : convenient builder for transactions
+* **WalletManager** : a wallet wrapper for secure and convenient wallet management
