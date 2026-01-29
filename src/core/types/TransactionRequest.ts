@@ -9,7 +9,7 @@ export interface TransactionRequestParams {
     gasLimit?: bigint;
     maxFeePerGas?: bigint;
     maxPriorityFee?: bigint;
-    chainId: number;
+    chainId?: number;
 }
 
 export class TransactionRequest {
@@ -30,7 +30,7 @@ export class TransactionRequest {
         this._gasLimit = params.gasLimit;
         this._maxFeePerGas = params.maxFeePerGas;
         this._maxPriorityFee = params.maxPriorityFee;
-        this._chainId = params.chainId;
+        this._chainId = params.chainId || 1;
     }
 
     get to(): Address {
