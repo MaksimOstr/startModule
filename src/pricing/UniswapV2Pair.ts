@@ -1,4 +1,4 @@
-import { ethers, formatUnits } from 'ethers';
+import { ethers } from 'ethers';
 import { Address } from '../core/types/Address';
 import { TokenAmount } from '../core/types/TokenAmount';
 import { ChainClient } from '../chain/ChainClient';
@@ -84,42 +84,52 @@ export class UniswapV2Pair {
         return numerator / denominator + 1n;
     }
 
-    public getSpotPrice(tokenIn: Token): number {
+    public getSpotPrice(tokenIn: Token): bigint {
+        const SCALE = 10n ** 18n;
+
         const isToken0 = tokenIn.address.checksum === this.token0.address.checksum;
 
         const reserveIn = isToken0 ? this.reserve0 : this.reserve1;
         const reserveOut = isToken0 ? this.reserve1 : this.reserve0;
 
-        const tokenInObj = isToken0 ? this.token0 : this.token1;
-        const tokenOutObj = isToken0 ? this.token1 : this.token0;
-
-        if (reserveIn === 0n) return 0;
-
-        const rIn = parseFloat(formatUnits(reserveIn, tokenInObj.decimals));
-        const rOut = parseFloat(formatUnits(reserveOut, tokenOutObj.decimals));
-        return rOut / rIn;
-    }
-
-    public getExecutionPrice(amountIn: bigint, tokenIn: Token): number {
-        const amountOut = this.getAmountOut(amountIn, tokenIn);
-
-        const isToken0 = tokenIn.address.checksum === this.token0.address.checksum;
         const decimalsIn = isToken0 ? this.token0.decimals : this.token1.decimals;
         const decimalsOut = isToken0 ? this.token1.decimals : this.token0.decimals;
 
-        const valIn = parseFloat(formatUnits(amountIn, decimalsIn));
-        const valOut = parseFloat(formatUnits(amountOut, decimalsOut));
+        if (reserveIn === 0n) return 0n;
 
-        if (valIn === 0) return 0;
-        return valOut / valIn;
+        const numerator = reserveOut * 10n ** BigInt(decimalsIn) * SCALE;
+        const denominator = reserveIn * 10n ** BigInt(decimalsOut);
+
+        return numerator / denominator;
     }
 
-    public getPriceImpact(amountIn: bigint, tokenIn: Token): number {
+    public getExecutionPrice(amountIn: bigint, tokenIn: Token): bigint {
+        const SCALE = 10n ** 18n;
+
+        if (amountIn === 0n) return 0n;
+
+        const amountOut = this.getAmountOut(amountIn, tokenIn);
+
+        const isToken0 = tokenIn.address.checksum === this.token0.address.checksum;
+
+        const decimalsIn = isToken0 ? this.token0.decimals : this.token1.decimals;
+        const decimalsOut = isToken0 ? this.token1.decimals : this.token0.decimals;
+
+        const numerator = amountOut * 10n ** BigInt(decimalsIn) * SCALE;
+        const denominator = amountIn * 10n ** BigInt(decimalsOut);
+
+        return numerator / denominator;
+    }
+
+    public getPriceImpact(amountIn: bigint, tokenIn: Token): bigint {
+        const SCALE = 10n ** 18n;
+
         const spot = this.getSpotPrice(tokenIn);
         const execution = this.getExecutionPrice(amountIn, tokenIn);
 
-        if (spot === 0) return 0;
-        return (spot - execution) / spot;
+        if (execution >= spot) return 0n;
+
+        return ((spot - execution) * SCALE) / spot;
     }
 
     public simulateSwap(amountIn: bigint, tokenIn: Token): UniswapV2Pair {

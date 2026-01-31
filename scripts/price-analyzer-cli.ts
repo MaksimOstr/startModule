@@ -59,9 +59,9 @@ async function main() {
         console.log(`Reserves: ${r0} ${pair.token0.name} / ${r1} ${pair.token1.name}`);
 
         const spot = pair.getSpotPrice(tokenIn);
-        const displaySpot = 1 / spot;
+        const spotFmt = formatUnits(spot, 18);
         console.log(
-            `Spot Price: ${chalk.green(displaySpot.toLocaleString())} ${tokenIn.name}/${tokenOut.name} (Inverse)\n`,
+            `Spot Price: ${chalk.green(Number(spotFmt).toLocaleString())} ${tokenOut.name} per ${tokenIn.name}\n`,
         );
 
         const table = new Table({
@@ -79,26 +79,36 @@ async function main() {
 
         impacts.forEach((row) => {
             const amtIn = Number(formatUnits(row.amountIn, tokenIn.decimals)).toLocaleString();
+
             const amtOut = Number(formatUnits(row.amountOut, tokenOut.decimals)).toLocaleString(
                 undefined,
-                { maximumFractionDigits: 4 },
+                { maximumFractionDigits: 6 },
             );
-            const execPrice = (1 / row.executionPrice).toLocaleString(undefined, {
+
+            const amountInNum = Number(formatUnits(row.amountIn, tokenIn.decimals));
+            const amountOutNum = Number(formatUnits(row.amountOut, tokenOut.decimals));
+
+            const displayExecPrice = amountInNum / amountOutNum;
+
+            const execPrice = displayExecPrice.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
             });
 
-            let impactStr = `${row.priceImpactPct.toFixed(2)}%`;
-            if (row.priceImpactPct > 5) impactStr = chalk.red(impactStr);
-            else if (row.priceImpactPct > 1) impactStr = chalk.yellow(impactStr);
+            const impactNum = Number(formatUnits(row.priceImpactPct, 18));
+
+            let impactStr = `${impactNum.toFixed(2)}%`;
+
+            if (impactNum > 5) impactStr = chalk.red(impactStr);
+            else if (impactNum > 1) impactStr = chalk.yellow(impactStr);
             else impactStr = chalk.green(impactStr);
 
             table.push([amtIn, amtOut, execPrice, impactStr]);
         });
 
         console.log(table.toString());
+        const maxTrade = analyzer.findMaxSizeForImpact(tokenIn, 1n);
 
-        const maxTrade = analyzer.findMaxSizeForImpact(tokenIn, 1.0);
         const maxTradeFmt = Number(formatUnits(maxTrade, tokenIn.decimals)).toLocaleString();
         console.log(
             `\nMax trade for ${chalk.yellow('1% impact')}: ${chalk.bold(maxTradeFmt)} ${tokenIn.name}\n`,

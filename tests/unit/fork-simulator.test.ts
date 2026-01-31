@@ -154,21 +154,25 @@ describe('ForkSimulator Integration Tests', () => {
             expect(comparison.simulated).not.toBe(0n);
         }
 
-        const calcFloat = parseFloat(ethers.formatUnits(comparison.calculated, 6));
-        const simFloat = parseFloat(ethers.formatUnits(comparison.simulated, 6));
+        const calcVal = comparison.calculated;
+        const simVal = comparison.simulated;
 
-        console.log(`Calculated: ${calcFloat.toFixed(6)} USDC`);
-        console.log(`Simulated:  ${simFloat.toFixed(6)} USDC`);
+        console.log(`Calculated: ${ethers.formatUnits(calcVal, 6)} USDC`);
+        console.log(`Simulated:  ${ethers.formatUnits(simVal, 6)} USDC`);
 
         if (comparison.match) {
             expect(comparison.match).toBe(true);
         } else {
-            const diff = Math.abs(calcFloat - simFloat);
-            const ratio = calcFloat > 0 ? diff / calcFloat : 1;
+            const diff = calcVal > simVal ? calcVal - simVal : simVal - calcVal;
 
-            console.log(`Diff: ${diff.toFixed(6)} (${(ratio * 100).toFixed(4)}%)`);
+            const isWithinThreshold = diff * 100n < calcVal;
 
-            expect(ratio).toBeLessThan(0.01);
+            if (!isWithinThreshold) {
+                const diffFmt = ethers.formatUnits(diff, 6);
+                console.log(`Diff: ${diffFmt} (Threshold exceeded 1%)`);
+            }
+
+            expect(isWithinThreshold).toBe(true);
         }
     });
 });
