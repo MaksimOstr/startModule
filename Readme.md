@@ -5,6 +5,7 @@
 ```
 core/      # core logic and basic types
 chain/     # blockchain interaction classes
+pricing/   # classes for blockchain price analysis
 ```
 
 ### core/
@@ -18,7 +19,14 @@ chain/     # blockchain interaction classes
 * **TransactionBuilder** : A class for constructing and preparing transactions
 * **TransactionAnalyzer**: transaction analysis tool
 
----
+### pricing/
+* **ForkSimulator**: blockchain interaction simulator
+* **MempoolMonitor**: monitoring pending transaction in real time
+* **PriceImpactAnalyzer**: price pool analyzer
+* **PricingEngine**: Orchestrator for routing, pool monitoring and fork simulation
+* **RouterFinder**: class which handle token routing and output optimization considering gas costs
+* **UniswapV2Pair**: AMM (Uniswap V2)
+
 
 ## Quick Start
 
@@ -130,8 +138,39 @@ Sold:      0.0001 ETH (Native)
 
 ---
 
+### Run price analyzer
+
+```bash
+ts-node scripts/price-analyzer-cli.ts 0xa0Ee7A142d267C1f36714E4a8F75612F20a79720 --token-in USDC --sizes 1000,10000,100000, 1000000
+```
+
+#### Expected output
+```
+Price Impact Analysis for USDC -> ETH
+Pool: 0xa0Ee7A142d267C1f36714E4a8F75612F20a79720
+Reserves: 2 000 000 USDC / 1 000 ETH
+Spot Price: 0,001 ETH per USDC
+
+┌───────────┬────────────┬────────────┬────────┐
+│   USDC In │    ETH Out │ Exec Price │ Impact │
+├───────────┼────────────┼────────────┼────────┤
+│     1 000 │   0,498252 │   2 007,02 │  0.35% │
+├───────────┼────────────┼────────────┼────────┤
+│    10 000 │   4,960273 │   2 016,02 │  0.79% │
+├───────────┼────────────┼────────────┼────────┤
+│   100 000 │  47,482974 │   2 106,02 │  5.03% │
+├───────────┼────────────┼────────────┼────────┤
+│ 1 000 000 │ 332,665999 │   3 006,02 │ 33.47% │
+└───────────┴────────────┴────────────┴────────┘
+
+Max trade for 1% impact: 14 183,966 USDC
+
+```
+
 ## Features
 
 * Retry logic with exponential backoff was implemented in **ChainClient** to ensure reliable behaviour during RPC instability
 * **TransactionBuilder** : convenient builder for transactions
 * **WalletManager** : a wallet wrapper for secure and convenient wallet management
+* Multi hop routing optimizations for better output considering gas costs
+* Trade simulation to choose optimal trading strategy.
