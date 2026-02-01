@@ -6,6 +6,8 @@
     "scripts": {
         "start": "ts-node src/index.ts",
         "test": "jest",
+        "test:unit": "jest tests/unit",
+        "test:fork": "jest tests/fork",
         "lint": "eslint .",
         "format": "prettier --write .",
         "check-format": "prettier --check .",

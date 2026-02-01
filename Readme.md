@@ -56,6 +56,25 @@ npm run start
 
 ## Usage
 
+### Tests
+
+* Run unit tests:
+    ```bash
+    npm run test:unit
+    ```
+    
+* Run fork tests:
+    1. Run local fork:
+    ```bash
+    ./scripts/start_fork.sh 
+    ```
+    2. Run fork tests:
+    ```bash
+    npm run test:fork
+    ```
+
+###
+
 ### Run integration test
 
 ```bash
