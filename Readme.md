@@ -27,6 +27,23 @@ pricing/   # classes for blockchain price analysis
 * **RouterFinder**: class which handle token routing and output optimization considering gas costs
 * **UniswapV2Pair**: AMM (Uniswap V2)
 
+## Architecture
+
+```mermaid
+graph LR
+    MM[Mempool Monitor] -- "1. Parsed Tx" --> PE[Pricing Engine]
+    CC[Chain Client] --> RF[Route Finder]
+    RF -- "2. Best Route" --> PE
+    
+    PE <--> |"3. Simulation"| FS[Fork Simulator]
+    
+    PE -- "4. Final Quote" --> Logic([Arbitrage Logic])
+
+    %% Styling
+    style PE fill:#fff,stroke:#333,stroke-width:2px
+    style Logic fill:#f5f5f5,stroke:#666
+```
+
 
 ## Quick Start
 
@@ -73,7 +90,6 @@ npm run start
     npm run test:integration
     ```
 
-###
 
 ### Run integration test
 
