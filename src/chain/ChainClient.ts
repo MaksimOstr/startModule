@@ -128,7 +128,14 @@ export class ChainClient {
 
     call(tx: TransactionRequest, block: string = 'latest'): Promise<string> {
         const txWithBlock: EtherTransactionRequest = {
-            ...tx,
+            to: tx.to.checksum,
+            nonce: tx.nonce,
+            gasLimit: tx.gasLimit,
+            maxFeePerGas: tx.maxFeePerGas,
+            maxPriorityFeePerGas: tx.maxPriorityFee,
+            chainId: tx.chainId,
+            data: tx.data,
+            value: tx.value.raw,
             blockTag: block,
         };
 

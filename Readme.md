@@ -70,7 +70,7 @@ npm run start
     ```
     2. Run fork tests:
     ```bash
-    npm run test:fork
+    npm run test:integration
     ```
 
 ###
