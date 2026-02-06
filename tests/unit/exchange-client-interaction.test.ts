@@ -1,4 +1,4 @@
-import { BINANCE_CONFIG } from '../../src/config';
+import { TEST_BINANCE_CONFIG } from '../../configs/config';
 import { ExchangeClient } from '../../src/exchange/ExchangeClient';
 
 describe('ExchangeClient live testnet', () => {
@@ -11,7 +11,7 @@ describe('ExchangeClient live testnet', () => {
 
     beforeAll(async () => {
         jest.useRealTimers();
-        client = new ExchangeClient(BINANCE_CONFIG);
+        client = new ExchangeClient(TEST_BINANCE_CONFIG);
         await client.init();
     });
 

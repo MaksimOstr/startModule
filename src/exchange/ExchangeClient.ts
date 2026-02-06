@@ -1,6 +1,6 @@
 import ccxt, { Exchange, Order, Str } from 'ccxt';
 import Decimal from 'decimal.js';
-import { BINANCE_CONFIG, PlatformConfig } from '../config';
+import { BINANCE_CONFIG, PlatformConfig } from '../../configs/config';
 
 export type OrderBookSide = [Decimal, Decimal][];
 
@@ -240,7 +240,6 @@ export class ExchangeClient {
         try {
             this.log('fetch_order_status_request', { orderId, symbol });
             const order = await this.exchange.fetchOrder(orderId, symbol);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const normalized = this.normalizeOrder(order);
             this.log('fetch_order_status_response', {
                 id: normalized.id,
@@ -275,7 +274,6 @@ export class ExchangeClient {
         const amount = new Decimal(order.amount ?? 0);
         const filled = new Decimal(order.filled ?? 0);
         const avgPrice = new Decimal(order.average ?? 0);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const fee = new Decimal(order.fee?.cost ?? 0);
         const feeAsset = order.fee?.currency ?? '';
 
