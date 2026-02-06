@@ -37,7 +37,9 @@
         "typescript-eslint": "^8.53.0"
     },
     "dependencies": {
+        "ccxt": "^4.5.36",
         "cli-table3": "^0.6.5",
+        "decimal.js": "^10.6.0",
         "dotenv": "^17.2.3",
         "ethers": "^6.16.0"
     }
