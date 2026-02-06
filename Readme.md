@@ -31,6 +31,32 @@ pricing/   # classes for blockchain price analysis
 
 ```mermaid
 graph LR
+    subgraph Core Modules
+        CC[Chain Client]
+        EC[Exchange Client]
+        PE[Pricing Engine]
+        IT[Inventory Tracker]
+        PNL[PnL Engine]
+        AC[Arb Checker]
+    end
+
+    CC --> PE
+    PE --> AC
+    EC --> AC
+    IT --> AC
+    AC --> PNL
+    AC -->|exec plan| IT
+
+    style AC fill:#eef7ff,stroke:#2563eb,stroke-width:2px
+    style PE fill:#fff,stroke:#333
+    style EC fill:#fff,stroke:#333
+    style CC fill:#fff,stroke:#333
+    style IT fill:#fff,stroke:#333
+    style PNL fill:#fff,stroke:#333
+```
+
+```mermaid
+graph LR
     MM[Mempool Monitor] -- "1. Parsed Tx" --> PE[Pricing Engine]
     CC[Chain Client] --> RF[Route Finder]
     RF -- "2. Best Route" --> PE
@@ -202,6 +228,141 @@ Max trade for 1% impact: 14 183,966 USDC
 
 ```
 
+### Run Arb Checker
+
+```bash
+npx ts-node scripts/arb-checker-cli.ts ETH/USDT --size 1
+```
+
+#### Expected output
+```
+ ARB CHECK: ETH/USDT (size: 1 ETH)
+
+Prices:
+  Uniswap V2:      2,045.66 (buy 1 ETH)
+  Binance bid:      2,050.46
+
+Gap: 4.80 (23.5 bps)
+
+Costs:
+  DEX fee:           30.0 bps
+  DEX price impact:   2.8 bps
+  CEX fee:           10.0 bps
+  CEX slippage:       0.0 bps
+  Gas:               0.31 (1.5 bps)
+
+  Total costs:       44.3 bps
+
+Net PnL estimate: -20.9 bps  NOT PROFITABLE
+
+Inventory:
+  Wallet USDT:  200,000 (need 2,046)
+  Binance ETH:   100 (need 1)
+
+Verdict: SKIP  costs exceed gap
+```
+
+### Run Order Book CLI
+
+```bash
+ts-node scripts/orderbook-cli.ts ETH/USDT --depth 20
+```
+
+#### Expected output
+```
+ ETH/USDT Order Book Analysis
+  Timestamp: 2026-02-06 21:13:58.504Z
+
+  Best Bid:     $2,047.84  26.0658 ETH
+  Best Ask:     $2,047.85  58.167 ETH
+  Mid Price:    $2,047.85
+  Spread:       $0.01 (0.05 bps)
+
+  Depth (within 10 bps):
+    Bids: 26.96 ETH ($55,203.62)
+    Asks: 68.02 ETH ($139,287.79)
+  Imbalance: -0.43 (sell pressure)
+
+  Walk-the-book (2 ETH buy):
+    Avg price:  $2,047.85
+    Slippage:   0.00 bps
+    Levels:     1
+  Walk-the-book (10 ETH buy):
+    Avg price:  $2,047.85
+    Slippage:   0.00 bps
+    Levels:     1
+
+  Effective spread (2 ETH round-trip): 0.049 bps
+```
+
+
+### Run Rebalance CLI
+
+```bash
+ts-node scripts/rebalance-cli.ts --check
+ts-node scripts/rebalance-cli.ts --plan ETH
+```
+#### Expected output
+
+```
+Inventory Skew Report
+
+Asset: ETH
+  Binance:  2 ETH  (20%)    deviation: -30%
+  Wallet:  8 ETH  (80%)    deviation: +30%
+  Status:   NEEDS REBALANCE
+
+Asset: USDT
+  Binance:  18,000 USDT  (60%)    deviation: +10%
+  Wallet:  12,000 USDT  (40%)    deviation: -10%
+  Status:   OK (deviation: 10%)
+```
+
+```
+Rebalance Plan: ETH
+
+Transfer 1:
+  From:     wallet
+  To:       binance
+  Amount:   3 ETH
+  Fee:      0.005 ETH (~$10.00)
+  ETA:      ~15 min
+
+  Result:
+    Binance:  4.995 ETH (50%)
+    Wallet:  5 ETH (50%)
+
+Estimated total cost: ~$10.00 (fees), time ~15 min
+```
+
+### Run PnL CLI
+
+```bash
+ts-node scripts/pnl-cli.ts --summary
+```
+
+#### Expected output
+```
+PnL Summary (last 24h)
+
+Total Trades:        5
+Win Rate:            60.0%
+Total PnL:           $1.70
+Total Fees:          $19.80
+Avg PnL/Trade:       $0.34
+Avg PnL (bps):       2.7 bps
+Best Trade:          $6.00
+Worst Trade:         -$5.90
+Total Notional:      $9,807.50
+
+Recent Trades:
+  20:51  ETH  Buy Binance / Sell Wallet  -$4.60 (-25.5 bps)
+  20:56  ETH  Buy Wallet / Sell Binance  +$4.00 (20.0 bps)
+  21:01  ETH  Buy Binance / Sell Wallet  -$5.90 (-24.5 bps)
+  21:06  ETH  Buy Wallet / Sell Binance  +$2.20 (13.7 bps)
+  21:11  ETH  Buy Wallet / Sell Binance  +$6.00 (30.0 bps)
+```
+
 ## Features
 
 * Retry logic with exponential backoff was implemented in **ChainClient** to ensure reliable behaviour during RPC instability
@@ -209,3 +370,6 @@ Max trade for 1% impact: 14 183,966 USDC
 * **WalletManager** : a wallet wrapper for secure and convenient wallet management
 * Multi hop routing optimizations for better output considering gas costs
 * Trade simulation to choose optimal trading strategy.
+* **Arb Checker**: end-to-end opportunity detector combining on-chain DEX pricing, CEX order books, fee/impact/slippage/gas costing, and inventory gating.
+* **Order Book Analyzer**: depth, imbalance, walk-the-book, and effective spread metrics for any CEX order book.
+* **PnL Engine**: records arbitrage legs and exports CSV summaries (net PnL, bps, win rate, Sharpe estimate).
