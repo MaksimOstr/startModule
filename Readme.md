@@ -34,25 +34,19 @@ graph LR
     subgraph Core Modules
         CC[Chain Client]
         EC[Exchange Client]
-        PE[Pricing Engine]
         IT[Inventory Tracker]
-        PNL[PnL Engine]
         AC[Arb Checker]
     end
 
-    CC --> PE
-    PE --> AC
-    EC --> AC
-    IT --> AC
-    AC --> PNL
-    AC -->|exec plan| IT
+    CC -->|on-chain price & gas| AC
+    EC -->|order books & fees| AC
+    IT -->|available balances| AC
+    AC -->|inventory check result| IT
 
     style AC fill:#eef7ff,stroke:#2563eb,stroke-width:2px
-    style PE fill:#fff,stroke:#333
     style EC fill:#fff,stroke:#333
     style CC fill:#fff,stroke:#333
     style IT fill:#fff,stroke:#333
-    style PNL fill:#fff,stroke:#333
 ```
 
 ```mermaid
