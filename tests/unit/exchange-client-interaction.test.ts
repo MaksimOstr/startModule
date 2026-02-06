@@ -1,4 +1,4 @@
-import { TEST_BINANCE_CONFIG } from '../../configs/config';
+import { TEST_BINANCE_CONFIG } from '../../src/config';
 import { ExchangeClient } from '../../src/exchange/ExchangeClient';
 
 describe('ExchangeClient live testnet', () => {
@@ -21,14 +21,12 @@ describe('ExchangeClient live testnet', () => {
     const symbol = 'ETH/USDT';
 
     test('fetch_order_book_structure_live', async () => {
-        jest.runAllTimers();
         const ob = await client.fetchOrderBook(symbol, 5);
         expect(ob.bids.length).toBeGreaterThan(0);
         expect(ob.asks.length).toBeGreaterThan(0);
     });
 
     test('fetch_balance_filters_zeros_live', async () => {
-        jest.runAllTimers();
         const bal = await client.fetchBalance();
         if (!bal) return;
         Object.values(bal).forEach((asset) => {
@@ -37,7 +35,6 @@ describe('ExchangeClient live testnet', () => {
     });
 
     test('limit_ioc_returns_fill_info_live', async () => {
-        jest.runAllTimers();
         const ob = await client.fetchOrderBook(symbol, 5);
         const price = ob.best_ask[0].mul(1.01).toNumber();
         const amount = 0.02;

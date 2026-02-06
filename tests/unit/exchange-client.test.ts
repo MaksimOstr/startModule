@@ -1,6 +1,6 @@
 import Decimal from 'decimal.js';
-import { BINANCE_CONFIG } from '../../src/config';
 import { ExchangeClient } from '../../src/exchange/ExchangeClient';
+import { TEST_BINANCE_CONFIG } from '../../src/config';
 
 const createOrderMock = jest.fn();
 const fetchOrderBookMock = jest.fn();
@@ -35,7 +35,7 @@ const resetMocks = () => {
 };
 
 describe('ExchangeClient mocked', () => {
-    const cfg = { ...BINANCE_CONFIG, apiKey: 'k', secret: 's' };
+    const cfg = { ...TEST_BINANCE_CONFIG, apiKey: 'k', secret: 's' };
 
     beforeEach(() => {
         resetMocks();

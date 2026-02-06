@@ -1,5 +1,5 @@
 import Decimal from 'decimal.js';
-import { BINANCE_CONFIG } from '../configs/config';
+import { BINANCE_CONFIG } from '../src/config';
 import { ExchangeClient } from '../src/exchange/ExchangeClient';
 import { OrderBookAnalyzer } from '../src/exchange/OrderBookAnalyzer';
 

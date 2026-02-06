@@ -1,6 +1,6 @@
 import ccxt, { Exchange, Order, Str } from 'ccxt';
 import Decimal from 'decimal.js';
-import { BINANCE_CONFIG, PlatformConfig } from '../../configs/config';
+import { BINANCE_CONFIG, PlatformConfig } from '../config';
 
 export type OrderBookSide = [Decimal, Decimal][];
 
