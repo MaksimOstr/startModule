@@ -35,7 +35,6 @@ export type NormalizedOrder = {
 export class ExchangeClient {
     private exchange: Exchange;
     private isInitialized = false;
-    private readonly isSandbox: boolean;
 
     constructor(config: PlatformConfig = BINANCE_CONFIG) {
         if (!config.apiKey || !config.secret) {
@@ -43,14 +42,10 @@ export class ExchangeClient {
         }
 
         try {
-            this.isSandbox = !!config.sandbox;
             this.exchange = new ccxt.binance({
                 ...config,
                 adjustForTimeDifference: true,
             });
-            if (this.isSandbox && this.exchange.setSandboxMode) {
-                this.exchange.setSandboxMode(true);
-            }
             this.log('init_exchange', 'Successfully initialized');
         } catch (err) {
             if (err instanceof ccxt.AuthenticationError) {
@@ -255,7 +250,6 @@ export class ExchangeClient {
     async getTradingFees(symbol: string): Promise<{ maker: Decimal; taker: Decimal }> {
         try {
             this.log('get_trading_fees_request', { symbol });
-            await this.exchange.loadMarkets();
             const feeInfo = await this.exchange.fetchTradingFee(symbol);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const maker = new Decimal((feeInfo as any).maker ?? 0);
