@@ -34,6 +34,10 @@ export class ChainClient {
         this.maxRetries = maxRetries;
     }
 
+    getProvider(): JsonRpcProvider {
+        return this.providers[0];
+    }
+
     async getBalance(address: Address): Promise<TokenAmount> {
         const balance: bigint = await this.withRetry(
             (provider) => provider.getBalance(address.checksum),
