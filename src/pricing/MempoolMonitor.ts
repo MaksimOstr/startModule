@@ -1,18 +1,18 @@
 import { ethers } from 'ethers';
 
 export interface ParsedSwap {
-    tx_hash: string;
+    txHash: string;
     router: string;
     dex: string;
     method: string;
-    token_in: string | null;
-    token_out: string | null;
-    amount_in: bigint;
-    min_amount_out: bigint;
+    tokenIn: string | null;
+    tokenOut: string | null;
+    amountIn: bigint;
+    minAmountOut: bigint;
     deadline: number;
     sender: string;
-    gas_price: bigint;
-    slippage_tolerance: number;
+    gasPrice: bigint;
+    slippageTolerance: number;
 }
 
 export class MempoolMonitor {
@@ -88,29 +88,28 @@ export class MempoolMonitor {
                 minAmountOut = decoded.amountOutMin;
             }
 
-            const slippage = this.calculateSlippage(amountIn, minAmountOut);
+            const slippageTolerance = this.calculateSlippage();
 
             return {
-                tx_hash: tx.hash,
+                txHash: tx.hash,
                 router: tx.to || '',
                 dex,
                 method,
-                token_in: tokenIn,
-                token_out: tokenOut,
-                amount_in: amountIn,
-                min_amount_out: minAmountOut,
+                tokenIn,
+                tokenOut,
+                amountIn,
+                minAmountOut,
                 deadline: Number(decoded.deadline),
                 sender: tx.from,
-                gas_price: tx.gasPrice || 0n,
-                slippage_tolerance: slippage,
+                gasPrice: tx.gasPrice || 0n,
+                slippageTolerance,
             };
         } catch {
             return null;
         }
     }
 
-    private calculateSlippage(amountIn: bigint, minAmountOut: bigint): number {
-        if (amountIn === 0n || minAmountOut === 0n) return 0;
+    private calculateSlippage(): number {
         return 0;
     }
 }

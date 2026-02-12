@@ -76,8 +76,8 @@ export class InventoryTracker {
 
     getAvailable(venue: Venue, asset: string): Decimal {
         this.assertVenue(venue);
-        const bal = this.balances.get(venue)?.find((b) => b.asset === asset);
-        return bal ? bal.free : new Decimal(0);
+        const balance = this.balances.get(venue)?.find((b) => b.asset === asset);
+        return balance ? balance.free : new Decimal(0);
     }
 
     canExecute(

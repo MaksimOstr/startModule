@@ -6,6 +6,7 @@ import { Token } from './Token';
 import { Route } from './Route';
 import { ForkSimulator } from './ForkSimulator';
 import { MempoolMonitor, ParsedSwap } from './MempoolMonitor';
+import { Priority } from '../chain/types/GasPrice';
 
 export class QuoteError extends Error {
     constructor(message: string) {
@@ -54,6 +55,11 @@ export class PricingEngine {
 
     public async start(): Promise<void> {
         await this.monitor.start();
+    }
+
+    public async fetchGasPriceGwei(): Promise<bigint> {
+        const gas = await this.client.getGasPrice();
+        return gas.getMaxFee(Priority.MEDIUM) / 1_000_000_000n;
     }
 
     public async loadPools(poolAddresses: Address[]): Promise<void> {
@@ -126,15 +132,15 @@ export class PricingEngine {
     }
 
     private onMempoolSwap(swap: ParsedSwap): void {
-        if (!swap.token_in || !swap.token_out) return;
+        if (!swap.tokenIn || !swap.tokenOut) return;
 
         for (const pair of this.pools.values()) {
             const involvesToken0 =
-                pair.token0.address.equals(swap.token_in) ||
-                pair.token0.address.equals(swap.token_out);
+                pair.token0.address.equals(swap.tokenIn) ||
+                pair.token0.address.equals(swap.tokenOut);
             const involvesToken1 =
-                pair.token1.address.equals(swap.token_in) ||
-                pair.token1.address.equals(swap.token_out);
+                pair.token1.address.equals(swap.tokenIn) ||
+                pair.token1.address.equals(swap.tokenOut);
 
             if (involvesToken0 && involvesToken1) {
                 console.log(

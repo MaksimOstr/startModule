@@ -230,8 +230,8 @@ describe('PricingEngine', () => {
             const spy = jest.spyOn(engine, 'refreshPool');
 
             mempoolCallback({
-                token_in: TOKEN_A.address.checksum,
-                token_out: TOKEN_B.address.checksum,
+                tokenIn: TOKEN_A.address.checksum,
+                tokenOut: TOKEN_B.address.checksum,
             });
 
             expect(spy).toHaveBeenCalledWith(PAIR_ADDR);
@@ -250,8 +250,8 @@ describe('PricingEngine', () => {
             const spy = jest.spyOn(engine, 'refreshPool');
 
             mempoolCallback({
-                token_in: '0xOTHER',
-                token_out: '0xANOTHER',
+                tokenIn: '0xOTHER',
+                tokenOut: '0xANOTHER',
             });
 
             expect(spy).not.toHaveBeenCalled();

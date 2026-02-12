@@ -90,12 +90,12 @@ describe('MempoolMonitor Parsing', () => {
 
         expect(result.dex).toBe('UniswapV2');
         expect(result.method).toBe('swapExactTokensForTokens');
-        expect(result.amount_in).toBe(inputAmount);
-        expect(result.min_amount_out).toBe(minOutputAmount);
+        expect(result.amountIn).toBe(inputAmount);
+        expect(result.minAmountOut).toBe(minOutputAmount);
         expect(result.deadline).toBe(expiry);
-        expect(result.gas_price).toBe(txGasPrice);
-        expect(result.token_in).toBe(WETH_ADDRESS);
-        expect(result.token_out).toBe(USDC_ADDRESS);
+        expect(result.gasPrice).toBe(txGasPrice);
+        expect(result.tokenIn).toBe(WETH_ADDRESS);
+        expect(result.tokenOut).toBe(USDC_ADDRESS);
         expect(result.sender).toBe(TX_SENDER);
     });
 });
