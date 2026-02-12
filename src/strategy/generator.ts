@@ -85,7 +85,9 @@ export class SignalGenerator {
         const inventoryOk = this.checkInventory(pair, direction, size, cexPrice);
         const withinLimits = new Decimal(tradeValue).lte(this.maxPositionUsd);
 
-        const signal = Signal.create(pair, direction, {
+        const signal = new Signal({
+            pair,
+            direction,
             cexPrice,
             dexPrice,
             spreadBps: spread.toNumber(),
