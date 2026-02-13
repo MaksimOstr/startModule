@@ -163,10 +163,7 @@ class ArbBot {
     }
 
     private async tick(): Promise<void> {
-        const cb = this.executor as unknown as {
-            circuitBreaker?: { isOpen: () => boolean };
-        };
-        if (cb.circuitBreaker?.isOpen()) {
+        if (this.executor.isCircuitBreakerOpen()) {
             info('Circuit breaker open');
             debug(this.debugMode, 'tick: circuit breaker open, returning');
             return;
@@ -207,12 +204,6 @@ class ArbBot {
             debug(this.debugMode, `tick: executor.execute() pair=${pair}`);
 
             const ctx = await this.executor.execute(signal);
-            if (ctx.state === ExecutorState.DONE && (this.config.simulation ?? true)) {
-                const pnl = ctx.actualNetPnl ?? 0;
-                if (pnl <= 0) {
-                    ctx.actualNetPnl = Math.abs(pnl) + 0.01;
-                }
-            }
             this.scorer.recordResult(pair, ctx.state === ExecutorState.DONE);
             debug(
                 this.debugMode,

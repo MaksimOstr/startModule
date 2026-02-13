@@ -140,6 +140,10 @@ export class Executor {
         return context;
     }
 
+    public isCircuitBreakerOpen(): boolean {
+        return this.circuitBreaker.isOpen();
+    }
+
     private createContext(signal: Signal): ExecutionContext {
         return {
             signal,

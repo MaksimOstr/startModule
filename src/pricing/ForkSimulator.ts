@@ -62,7 +62,11 @@ export class ForkSimulator {
                 const tx = await weth.deposit({ value: wrapAmount });
                 await tx.wait();
             } else {
-                await this.fundFromWhale(tokenInAddress, senderAddress, deficit + deficit / 10n + 1n);
+                await this.fundFromWhale(
+                    tokenInAddress,
+                    senderAddress,
+                    deficit + deficit / 10n + 1n,
+                );
             }
 
             balance = await token.balanceOf(senderAddress);
@@ -73,7 +77,10 @@ export class ForkSimulator {
             }
         }
 
-        const allowance: bigint = await token.allowance(senderAddress, ForkSimulator.ROUTER_ADDRESS);
+        const allowance: bigint = await token.allowance(
+            senderAddress,
+            ForkSimulator.ROUTER_ADDRESS,
+        );
         if (allowance < amountIn) {
             const approveTx = await token.approve(ForkSimulator.ROUTER_ADDRESS, ethers.MaxUint256);
             await approveTx.wait();
@@ -89,7 +96,10 @@ export class ForkSimulator {
         }
 
         try {
-            await this.provider.send('anvil_setBalance', [whale, ethers.toQuantity(ethers.parseEther('10'))]);
+            await this.provider.send('anvil_setBalance', [
+                whale,
+                ethers.toQuantity(ethers.parseEther('10')),
+            ]);
             await this.provider.send('anvil_impersonateAccount', [whale]);
 
             const whaleSigner = await this.provider.getSigner(whale);
@@ -97,7 +107,9 @@ export class ForkSimulator {
             const tx = await token.transfer(to, amount);
             await tx.wait();
         } finally {
-            await this.provider.send('anvil_stopImpersonatingAccount', [whale]).catch(() => undefined);
+            await this.provider
+                .send('anvil_stopImpersonatingAccount', [whale])
+                .catch(() => undefined);
         }
     }
 
