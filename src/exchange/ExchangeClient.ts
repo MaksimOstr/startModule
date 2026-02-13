@@ -35,8 +35,10 @@ export type NormalizedOrder = {
 export class ExchangeClient {
     private exchange: Exchange;
     private isInitialized = false;
+    private enableLogs: boolean;
 
-    constructor(config: PlatformConfig = BINANCE_CONFIG) {
+    constructor(config: PlatformConfig = BINANCE_CONFIG, enableLogs: boolean = true) {
+        this.enableLogs = enableLogs;
         if (!config.apiKey || !config.secret) {
             throw new Error('Binance API credentials are required');
         }
@@ -78,10 +80,12 @@ export class ExchangeClient {
     }
 
     private log(action: string, payload: unknown) {
+        if (!this.enableLogs) return;
         console.info(`[ExchangeClient] ${action}`, payload);
     }
 
     private logError(action: string, err: unknown) {
+        if (!this.enableLogs) return;
         console.error(`[ExchangeClient] ${action} error`, err);
     }
 

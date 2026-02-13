@@ -22,8 +22,9 @@ export class ChainClient {
     private providers: JsonRpcProvider[];
     private timeout: number;
     private maxRetries: number;
+    private enableLogs: boolean;
 
-    constructor(rpcUrls: string[], timeout = 30, maxRetries = 3) {
+    constructor(rpcUrls: string[], timeout = 30, maxRetries = 3, enableLogs = true) {
         if (rpcUrls.length === 0) throw new Error('At least one RPC URL is required');
         this.providers = rpcUrls.map((url) => {
             const fetchRequest = new FetchRequest(url);
@@ -32,6 +33,7 @@ export class ChainClient {
         });
         this.timeout = timeout;
         this.maxRetries = maxRetries;
+        this.enableLogs = enableLogs;
     }
 
     getProvider(): JsonRpcProvider {
@@ -90,12 +92,12 @@ export class ChainClient {
         pollInterval: number = 1.0,
     ): Promise<TransactionReceipt> {
         const start = Date.now();
-        console.log(`[ChainClient] Start waiting for receipt: ${txHash}, timeout=${timeout}s`);
+        this.log(`[ChainClient] Start waiting for receipt: ${txHash}, timeout=${timeout}s`);
         while (Date.now() - start < timeout * 1000) {
             const receipt = await this.getReceipt(txHash, false);
             if (receipt) {
                 const duration = Date.now() - start;
-                console.log(`[ChainClient] Receipt received for ${txHash} after ${duration} ms`);
+                this.log(`[ChainClient] Receipt received for ${txHash} after ${duration} ms`);
                 return receipt;
             }
             await new Promise((r) => setTimeout(r, pollInterval * 1000));
@@ -160,7 +162,7 @@ export class ChainClient {
                 const duration = Date.now() - start;
 
                 if (logSuccess) {
-                    console.log(
+                    this.log(
                         `[ChainClient] [${action}] succeeded in ${duration}ms (attempt ${attempt + 1})`,
                     );
                 }
@@ -204,5 +206,10 @@ export class ChainClient {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (lastError as any)?.code,
         );
+    }
+
+    private log(message: string): void {
+        if (!this.enableLogs) return;
+        console.log(message);
     }
 }

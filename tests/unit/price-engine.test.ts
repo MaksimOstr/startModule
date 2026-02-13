@@ -44,6 +44,7 @@ describe('PricingEngine', () => {
         );
 
         (ForkSimulator as unknown as jest.Mock).mockImplementation(() => ({
+            ensureSenderReady: jest.fn().mockResolvedValue(undefined),
             simulateRoute: jest.fn(),
         }));
 

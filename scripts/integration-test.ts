@@ -1,9 +1,9 @@
-import { ChainClient } from '../src/chain/ChainClient';
-import { Address } from '../src/core/types/Address';
-import { WalletManager } from '../src/core/WalletManager';
-import { TransactionBuilder } from '../src/chain/TransactionBuilder';
-import { TokenAmount } from '../src/core/types/TokenAmount';
 import { ethers } from 'ethers';
+import { WalletManager } from '../src/core/WalletManager';
+import { ChainClient } from '../src/chain/ChainClient';
+import { TransactionBuilder } from '../src/chain/TransactionBuilder';
+import { Address } from '../src/core/types/Address';
+import { TokenAmount } from '../src/core/types/TokenAmount';
 import { Priority } from '../src/chain/types/GasPrice';
 
 const walletManager = WalletManager.fromEnv();

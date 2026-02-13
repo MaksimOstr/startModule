@@ -1,6 +1,6 @@
 import Decimal from 'decimal.js';
-import { BINANCE_CONFIG } from '../src/config';
 import { ExchangeClient } from '../src/exchange/ExchangeClient';
+import { BINANCE_CONFIG } from '../src/config';
 import { OrderBookAnalyzer } from '../src/exchange/OrderBookAnalyzer';
 
 type CliOpts = {

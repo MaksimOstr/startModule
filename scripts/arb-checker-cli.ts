@@ -1,8 +1,8 @@
 import { configDotenv } from 'dotenv';
 import Decimal from 'decimal.js';
 import { BINANCE_CONFIG } from '../src/config';
-import { ExchangeClient } from '../src/exchange/ExchangeClient';
 import { InventoryTracker, Venue } from '../src/inventory/tracker';
+import { ExchangeClient } from '../src/exchange/ExchangeClient';
 import { ChainClient } from '../src/chain/ChainClient';
 import { ArbChecker } from '../src/integration/arb_checker';
 

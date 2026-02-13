@@ -1,10 +1,10 @@
 import { formatUnits, parseUnits } from 'ethers';
-import { Token } from '../src/pricing/Token';
-import { UniswapV2Pair } from '../src/pricing/UniswapV2Pair';
-import { Address } from '../src/core/types/Address';
-import { PriceImpactAnalyzer } from '../src/pricing/PriceImpactAnalyzer';
 import Table from 'cli-table3';
 import chalk from 'chalk';
+import { Token } from '../src/pricing/Token';
+import { Address } from '../src/core/types/Address';
+import { UniswapV2Pair } from '../src/pricing/UniswapV2Pair';
+import { PriceImpactAnalyzer } from '../src/pricing/PriceImpactAnalyzer';
 
 async function main() {
     const args = process.argv.slice(2);

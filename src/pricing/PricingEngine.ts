@@ -114,6 +114,7 @@ export class PricingEngine {
         }
 
         const IMPERSONATED_SENDER = new Address('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266');
+        await this.simulator.ensureSenderReady(route, amountIn, IMPERSONATED_SENDER);
 
         const simResult = await this.simulator.simulateRoute(route, amountIn, IMPERSONATED_SENDER);
 
