@@ -17,12 +17,14 @@ import {
     ReplacementUnderpriced,
     RPCError,
 } from './Errors';
+import { getLogger } from '../logger';
 
 export class ChainClient {
     private providers: JsonRpcProvider[];
     private timeout: number;
     private maxRetries: number;
     private enableLogs: boolean;
+    private logger = getLogger('ChainClient');
 
     constructor(rpcUrls: string[], timeout = 30, maxRetries = 3, enableLogs = true) {
         if (rpcUrls.length === 0) throw new Error('At least one RPC URL is required');
@@ -60,7 +62,7 @@ export class ChainClient {
         return this.withRetry(async (provider) => {
             const fee: FeeData = await provider.getFeeData();
 
-            if (!fee.maxFeePerGas || !fee.maxPriorityFeePerGas) {
+            if (fee.maxFeePerGas === null || fee.maxPriorityFeePerGas === null) {
                 throw new RPCError('Cannot fetch fee data from RPC node');
             }
 
@@ -92,12 +94,12 @@ export class ChainClient {
         pollInterval: number = 1.0,
     ): Promise<TransactionReceipt> {
         const start = Date.now();
-        this.log(`[ChainClient] Start waiting for receipt: ${txHash}, timeout=${timeout}s`);
+        this.log(`Start waiting for receipt: ${txHash}, timeout=${timeout}s`);
         while (Date.now() - start < timeout * 1000) {
             const receipt = await this.getReceipt(txHash, false);
             if (receipt) {
                 const duration = Date.now() - start;
-                this.log(`[ChainClient] Receipt received for ${txHash} after ${duration} ms`);
+                this.log(`Receipt received for ${txHash} after ${duration} ms`);
                 return receipt;
             }
             await new Promise((r) => setTimeout(r, pollInterval * 1000));
@@ -162,9 +164,7 @@ export class ChainClient {
                 const duration = Date.now() - start;
 
                 if (logSuccess) {
-                    this.log(
-                        `[ChainClient] [${action}] succeeded in ${duration}ms (attempt ${attempt + 1})`,
-                    );
+                    this.log(`[${action}] succeeded in ${duration}ms (attempt ${attempt + 1})`);
                 }
 
                 return result;
@@ -210,6 +210,6 @@ export class ChainClient {
 
     private log(message: string): void {
         if (!this.enableLogs) return;
-        console.log(message);
+        this.logger.info(message);
     }
 }

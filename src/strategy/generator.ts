@@ -6,16 +6,24 @@ import { Token } from '../pricing/Token';
 import { Address } from '../core/types/Address';
 import { InventoryTracker, Venue } from '../inventory/tracker';
 import { ExchangeClient } from '../exchange/ExchangeClient';
+import { getLogger } from '../logger';
 
-type GeneratorConfig = {
+export type GeneratorConfig = {
     min_spread_bps?: number;
     min_profit_usd?: number;
     max_position_usd?: number;
     signal_ttl_seconds?: number;
     cooldown_seconds?: number;
+    tokenMap?: Record<string, string>;
 };
-
+const tokenMap = {
+    ETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+    WETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+    USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+    USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+};
 const DECIMALS: Record<string, number> = { ETH: 18, WETH: 18, USDT: 6, USDC: 6 };
+const logger = getLogger('SignalGenerator');
 
 export class SignalGenerator {
     private lastSignalTime: Map<string, number>;
@@ -24,12 +32,7 @@ export class SignalGenerator {
     private maxPositionUsd: Decimal;
     private signalTtl: number;
     private cooldown: number;
-    private tokenMap: Record<string, string> = {
-        ETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-        WETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-        USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-        USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-    };
+    private tokenMap: Record<string, string>;
 
     constructor(
         private exchange: ExchangeClient,
@@ -43,6 +46,7 @@ export class SignalGenerator {
         this.maxPositionUsd = new Decimal(config.max_position_usd ?? 10_000);
         this.signalTtl = config.signal_ttl_seconds ?? 5;
         this.cooldown = config.cooldown_seconds ?? 2;
+        this.tokenMap = config.tokenMap ?? tokenMap;
         this.lastSignalTime = new Map();
     }
 
@@ -71,6 +75,9 @@ export class SignalGenerator {
             cexPrice = prices.cexBid;
             dexPrice = prices.dexBuy;
         } else {
+            logger.info(
+                `Pair: ${pair}, BUY_CEX_SELL_DEX spread: ${spreadA}, BUY_DEX_SELL_CEX spread: ${spreadB} SKIPPING`,
+            );
             return null;
         }
 
@@ -80,7 +87,12 @@ export class SignalGenerator {
         const fees = (feesBps / 10_000) * tradeValue;
         const netPnl = grossPnl - fees;
 
-        if (netPnl < this.minProfitUsd.toNumber()) return null;
+        if (netPnl < this.minProfitUsd.toNumber()) {
+            logger.info(
+                `Pair: ${pair}, chosen direction: ${direction}, netPnl: ${netPnl} SKIPPING`,
+            );
+            return null;
+        }
 
         const inventoryOk = this.checkInventory(pair, direction, size, cexPrice);
         const withinLimits = new Decimal(tradeValue).lte(this.maxPositionUsd);

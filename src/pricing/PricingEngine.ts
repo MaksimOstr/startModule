@@ -59,7 +59,11 @@ export class PricingEngine {
 
     public async fetchGasPriceGwei(): Promise<bigint> {
         const gas = await this.client.getGasPrice();
-        return gas.getMaxFee(Priority.MEDIUM) / 1_000_000_000n;
+        const maxFeeWei = gas.getMaxFee(Priority.MEDIUM);
+        if (maxFeeWei <= 0n) return 0n;
+
+        // Keep units in gwei for existing route cost logic, but avoid dropping to 0 on L2.
+        return (maxFeeWei + 1_000_000_000n - 1n) / 1_000_000_000n;
     }
 
     public async loadPools(poolAddresses: Address[]): Promise<void> {
@@ -114,8 +118,6 @@ export class PricingEngine {
         }
 
         const IMPERSONATED_SENDER = new Address('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266');
-        await this.simulator.ensureSenderReady(route, amountIn, IMPERSONATED_SENDER);
-
         const simResult = await this.simulator.simulateRoute(route, amountIn, IMPERSONATED_SENDER);
 
         if (!simResult.success) {

@@ -3,7 +3,7 @@ import { TokenAmount } from '../core/types/TokenAmount';
 import { configDotenv } from 'dotenv';
 import { ChainClient } from './ChainClient';
 
-configDotenv();
+configDotenv({ quiet: true });
 
 const KNOWN_SELECTORS: Record<string, { name: string; types: string[] }> = {
     '0xa9059cbb': { name: 'transfer', types: ['address', 'uint256'] },

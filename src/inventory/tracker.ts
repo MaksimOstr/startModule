@@ -174,6 +174,23 @@ export class InventoryTracker {
         };
     }
 
+    inventorySkews(pair: string): Array<{ token: string; status?: string }> {
+        const [base, quote] = pair.split('/');
+        return [base, quote].filter(Boolean).map((asset) => {
+            const skew = this.skew(asset);
+            return {
+                token: asset,
+                status: this.toSkewStatus(skew.maxDeviationPct),
+            };
+        });
+    }
+
+    private toSkewStatus(maxDeviationPct: number): string {
+        if (maxDeviationPct >= 30) return 'RED';
+        if (maxDeviationPct >= 15) return 'YELLOW';
+        return 'GREEN';
+    }
+
     private ensureAsset(store: Balance[], venue: Venue, asset: string): Balance {
         let bal = store.find((b) => b.asset === asset);
         if (!bal) {

@@ -1,3 +1,4 @@
+import { Config } from '../../config';
 import { Address } from './Address';
 import { TokenAmount } from './TokenAmount';
 
@@ -20,7 +21,7 @@ export class TransactionRequest {
     private _gasLimit?: bigint;
     private _maxFeePerGas?: bigint;
     private _maxPriorityFee?: bigint;
-    private _chainId: number = 1;
+    private _chainId?: number;
 
     constructor(params: TransactionRequestParams) {
         this._to = params.to;
@@ -30,7 +31,7 @@ export class TransactionRequest {
         this._gasLimit = params.gasLimit;
         this._maxFeePerGas = params.maxFeePerGas;
         this._maxPriorityFee = params.maxPriorityFee;
-        this._chainId = params.chainId || 1;
+        this._chainId = params.chainId ?? Config.CHAIN_ID;
     }
 
     get to(): Address {
@@ -82,10 +83,10 @@ export class TransactionRequest {
         this._maxPriorityFee = fee;
     }
 
-    get chainId(): number {
+    get chainId(): number | undefined {
         return this._chainId;
     }
-    set chainId(id: number) {
+    set chainId(id: number | undefined) {
         this._chainId = id;
     }
 

@@ -132,6 +132,17 @@ export class UniswapV2Pair {
         return ((spot - execution) * SCALE) / spot;
     }
 
+    public getReserve(address: Address) {
+        if (this.token0.address.checksum === address.checksum) {
+            return this.reserve0;
+        }
+        if (this.token1.address.checksum === address.checksum) {
+            return this.reserve1;
+        }
+
+        throw new Error('Token by provided address not found in the pair');
+    }
+
     public simulateSwap(amountIn: bigint, tokenIn: Token): UniswapV2Pair {
         const amountOut = this.getAmountOut(amountIn, tokenIn);
         const isToken0 = tokenIn.address.checksum === this.token0.address.checksum;
@@ -161,14 +172,48 @@ export class UniswapV2Pair {
 
     static async fromChain(address: Address, client: ChainClient): Promise<UniswapV2Pair> {
         const pairInterface = new ethers.Interface([
-            'function token0() external view returns (address)',
-            'function token1() external view returns (address)',
-            'function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)',
+            {
+                type: 'function',
+                name: 'token0',
+                stateMutability: 'view',
+                inputs: [],
+                outputs: [{ name: '', type: 'address' }],
+            },
+            {
+                type: 'function',
+                name: 'token1',
+                stateMutability: 'view',
+                inputs: [],
+                outputs: [{ name: '', type: 'address' }],
+            },
+            {
+                type: 'function',
+                name: 'getReserves',
+                stateMutability: 'view',
+                inputs: [],
+                outputs: [
+                    { name: 'reserve0', type: 'uint112' },
+                    { name: 'reserve1', type: 'uint112' },
+                    { name: 'blockTimestampLast', type: 'uint32' },
+                ],
+            },
         ]);
 
         const tokenInterface = new ethers.Interface([
-            'function name() view returns (string)',
-            'function decimals() view returns (uint8)',
+            {
+                type: 'function',
+                name: 'name',
+                stateMutability: 'view',
+                inputs: [],
+                outputs: [{ name: '', type: 'string' }],
+            },
+            {
+                type: 'function',
+                name: 'decimals',
+                stateMutability: 'view',
+                inputs: [],
+                outputs: [{ name: '', type: 'uint8' }],
+            },
         ]);
 
         const zeroVal = new TokenAmount(0n, 18);

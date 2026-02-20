@@ -1,7 +1,7 @@
 import { Token } from './Token';
 import { Route } from './Route';
-import { Address } from '../core/types/Address';
 import { UniswapV2Pair } from './UniswapV2Pair';
+import { Config } from '../config';
 
 export interface RouteComparison {
     route: Route;
@@ -86,35 +86,16 @@ export class RouteFinder {
         gasPriceGwei: bigint,
         maxHops: number = 3,
     ): [Route | null, bigint] {
-        const allRoutes = this.findAllRoutes(tokenIn, tokenOut, maxHops);
-
-        let bestRoute: Route | null = null;
-        let maxNetOutput = -1n;
-
-        for (const route of allRoutes) {
-            try {
-                const grossOutput = route.getOutput(amountIn);
-                const gasCostInOutput = this.calculateGasCostInOutputToken(
-                    route,
-                    tokenIn,
-                    tokenOut,
-                    gasPriceGwei,
-                );
-
-                const netOutput =
-                    grossOutput > gasCostInOutput ? grossOutput - gasCostInOutput : 0n;
-
-                if (netOutput > maxNetOutput) {
-                    maxNetOutput = netOutput;
-                    bestRoute = route;
-                }
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            } catch (error) {
-                continue;
-            }
+        if (amountIn <= 0n) {
+            return [null, 0n];
         }
 
-        return [bestRoute, maxNetOutput];
+        const comparisons = this.compareRoutes(tokenIn, tokenOut, amountIn, gasPriceGwei, maxHops);
+        if (comparisons.length === 0) {
+            return [null, 0n];
+        }
+
+        return [comparisons[0].route, comparisons[0].netOutput];
     }
 
     public compareRoutes(
@@ -122,20 +103,21 @@ export class RouteFinder {
         tokenOut: Token,
         amountIn: bigint,
         gasPriceGwei: bigint,
+        maxHops: number = 3,
     ): RouteComparison[] {
-        const allRoutes = this.findAllRoutes(tokenIn, tokenOut);
+        const allRoutes = this.findAllRoutes(tokenIn, tokenOut, maxHops);
         const results: RouteComparison[] = [];
+        const ethPriceInOut = this.getTokenEthPrice(tokenOut);
 
         for (const route of allRoutes) {
             try {
                 const grossOutput = route.getOutput(amountIn);
                 const gasEstimate = route.estimateGas();
-
-                const gasCostInOutput = this.calculateGasCostInOutputToken(
-                    route,
-                    tokenIn,
+                const gasCostWei = gasEstimate * gasPriceGwei * 1_000_000_000n;
+                const gasCostInOutput = this.convertGasCostToOutputToken(
+                    gasCostWei,
                     tokenOut,
-                    gasPriceGwei,
+                    ethPriceInOut,
                 );
 
                 const netOutput =
@@ -161,46 +143,69 @@ export class RouteFinder {
         });
     }
 
-    private calculateGasCostInOutputToken(
-        route: Route,
-        tokenIn: Token,
+    private convertGasCostToOutputToken(
+        gasCostWei: bigint,
         tokenOut: Token,
-        gasPriceGwei: bigint,
+        ethPriceInOut: bigint,
     ): bigint {
-        const gasEstimate = route.estimateGas();
-        const gasCostWei = gasEstimate * gasPriceGwei * 1_000_000_000n;
+        if (gasCostWei <= 0n || ethPriceInOut <= 0n) return 0n;
+        if (this.isWeth(tokenOut)) return gasCostWei;
 
-        if (this.isEth(tokenOut)) {
-            return gasCostWei;
+        const wad = 10n ** 18n;
+        const gasCostOutQ18 = this.mulDivCeil(gasCostWei, ethPriceInOut, wad);
+
+        if (tokenOut.decimals === 18) return gasCostOutQ18;
+        if (tokenOut.decimals > 18) {
+            return gasCostOutQ18 * 10n ** BigInt(tokenOut.decimals - 18);
         }
-        if (this.isEth(tokenIn)) {
-            try {
-                return route.getOutput(gasCostWei);
-            } catch {
-                return 0n;
-            }
-        }
-        try {
-            const wethToken = new Token(
-                'WETH',
-                18,
-                new Address('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'),
-            );
-
-            const [ethRoute] = this.findBestRoute(wethToken, tokenOut, gasCostWei, gasPriceGwei, 2);
-
-            if (ethRoute) {
-                return ethRoute.getOutput(gasCostWei);
-            }
-        } catch {
-            return 0n;
-        }
-
-        return 0n;
+        return this.divCeil(gasCostOutQ18, 10n ** BigInt(18 - tokenOut.decimals));
     }
 
-    private isEth(token: Token): boolean {
-        const name = token.name.toUpperCase();
-        return name === 'ETH' || name === 'WETH';
+    private mulDivCeil(a: bigint, b: bigint, denominator: bigint): bigint {
+        return this.divCeil(a * b, denominator);
+    }
+
+    private divCeil(value: bigint, denominator: bigint): bigint {
+        return (value + denominator - 1n) / denominator;
+    }
+
+    private getTokenEthPrice(tokenOut: Token): bigint {
+        if (this.isWeth(tokenOut)) {
+            return 10n ** 18n;
+        }
+
+        const neighbors = this.graph.get(tokenOut.address.checksum) || [];
+        let bestPrice = 0n;
+        let maxWethReserve = 0n;
+
+        for (const { pool, otherToken } of neighbors) {
+            if (!this.isWeth(otherToken)) continue;
+
+            try {
+                const wethReserve = pool.getReserve(otherToken.address);
+                const tokenReserve = pool.getReserve(tokenOut.address);
+                if (wethReserve <= 0n || tokenReserve <= 0n) {
+                    continue;
+                }
+
+                const spotPrice = pool.getSpotPrice(otherToken);
+                if (spotPrice <= 0n) {
+                    continue;
+                }
+
+                if (wethReserve > maxWethReserve) {
+                    maxWethReserve = wethReserve;
+                    bestPrice = spotPrice;
+                }
+            } catch {
+                continue;
+            }
+        }
+
+        return bestPrice;
+    }
+
+    private isWeth(token: Token): boolean {
+        return token.address.checksum.toLowerCase() === Config.WETH_ADDRESS.toLowerCase();
     }
 }
