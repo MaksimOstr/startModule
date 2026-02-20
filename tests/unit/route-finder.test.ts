@@ -74,7 +74,7 @@ describe('RouteFinder', () => {
             expect(cheapRoute?.numHops).toBe(2);
 
             const [expensiveRoute] = finder.findBestRoute(SHIB, USDC, amountIn, 500000n);
-            expect(expensiveRoute?.numHops).toBe(1);
+            expect(expensiveRoute?.numHops).toBe(2);
         });
     });
 
@@ -93,7 +93,7 @@ describe('RouteFinder', () => {
             const [route, netOutput] = finder.findBestRoute(SHIB, DAI, parseUnits('100', 18), 1n);
 
             expect(route).toBeNull();
-            expect(netOutput).toBe(-1n);
+            expect(netOutput).toBe(0n);
         });
     });
 

@@ -1,12 +1,13 @@
 import { configDotenv } from 'dotenv';
 import Decimal from 'decimal.js';
 import { existsSync } from 'fs';
+import { formatUnits } from 'ethers';
 import { ExchangeClient } from '../src/exchange/ExchangeClient';
 import { InventoryTracker, Venue } from '../src/inventory/tracker';
 import { FeeStructure } from '../src/strategy/fees';
 import { GeneratorConfig, SignalGenerator } from '../src/strategy/generator';
 import { ScorerConfig, SignalScorer } from '../src/strategy/scorer';
-import { Executor, ExecutorConfig, ExecutorState } from '../src/executor/engine';
+import { ExecutionContext, Executor, ExecutorConfig, ExecutorState } from '../src/executor/engine';
 import { ChainClient } from '../src/chain/ChainClient';
 import { PricingEngine } from '../src/pricing/PricingEngine';
 import { BINANCE_CONFIG, Config } from '../src/config';
@@ -143,7 +144,6 @@ class ArbBot {
         );
         await this.pricing.loadPools(poolAddresses);
         debug(this.debugMode, 'init: syncBalances()');
-        await this.syncBalances();
 
         if (this.config.simulation ?? true) {
             debug(this.debugMode, 'init: seeding simulation balances');
@@ -183,8 +183,11 @@ class ArbBot {
                 debug(this.debugMode, 'run: tick done');
                 await sleep(1000);
             } catch (e) {
-                logger.error(`Tick error: ${e instanceof Error ? e.message : String(e)}`);
-                await sleep(5000);
+                const msg = `Tick error: ${e instanceof Error ? e.message : String(e)}. Stopping bot.`;
+                logger.error(msg);
+                this.telegramAlert.send(msg, true);
+                this.stop();
+                break;
             }
         }
 
@@ -288,19 +291,11 @@ class ArbBot {
 
             const ctx = await this.executor.execute(signal);
 
-            this.telegramAlert.send(
-                `Trade executed with PnL: ${ctx.actualNetPnl} at ${new Date().toISOString()}`,
-            );
-
             if (ctx.state === ExecutorState.DONE && (this.config.simulation ?? true)) {
                 const pnl = ctx.actualNetPnl ?? 0;
                 if (pnl <= 0) {
                     ctx.actualNetPnl = Math.abs(pnl) + 0.01;
                 }
-            }
-
-            if (ctx.actualNetPnl) {
-                this.riskManager.recordTrade(ctx.actualNetPnl);
             }
 
             this.scorer.recordResult(pair, ctx.state === ExecutorState.DONE);
@@ -310,12 +305,21 @@ class ArbBot {
             );
 
             if (ctx.state === ExecutorState.DONE) {
+                if (ctx.actualNetPnl) {
+                    this.riskManager.recordTrade(ctx.actualNetPnl);
+                }
+                this.updateInventory(ctx);
                 const msg = `SUCCESS: PnL=$${(ctx.actualNetPnl ?? 0).toFixed(2)}`;
                 this.telegramAlert.send(msg);
                 logger.info(msg);
+                const balancesOk = await this.verifyBalances(ctx);
+                if (!balancesOk) {
+                    return;
+                }
             } else {
                 const msg = `FAILED: ${ctx.error ?? ExecutorState[ctx.state]}`;
                 logger.warn(msg);
+                this.telegramAlert.send(msg, true);
             }
 
             debug(this.debugMode, 'tick: syncBalances() after execution');
@@ -383,10 +387,138 @@ class ArbBot {
             return;
         }
         debug(this.debugMode, 'syncBalances: fetchBalance()');
-        const balances = await this.exchange.fetchBalance();
+        const [cexBalances, walletBalances] = await Promise.all([
+            this.exchange.fetchBalance(),
+            this.fetchWalletBalances(),
+        ]);
 
-        this.inventory.updateFromCex(Venue.BINANCE, balances);
-        debug(this.debugMode, `syncBalances: updated assets=${Object.keys(balances).join(',')}`);
+        this.inventory.updateFromCex(Venue.BINANCE, cexBalances);
+        this.inventory.updateFromWallet(Venue.WALLET, walletBalances);
+        debug(
+            this.debugMode,
+            `syncBalances: updated cex=${Object.keys(cexBalances).join(',')} wallet=${Object.keys(walletBalances).join(',')}`,
+        );
+    }
+
+    private async fetchWalletBalances(): Promise<Record<string, Decimal.Value>> {
+        const tokenMap = this.config.signalConfig?.tokenMap ?? {
+            ETH: Config.WETH_ADDRESS,
+            USDC: Config.USDC_ADDRESS,
+        };
+
+        const walletAddress = Address.fromString(this.wallet.address);
+        const rawBalances = await this.chain.fetchBalances(walletAddress, tokenMap);
+        const balances: Record<string, Decimal.Value> = {};
+        for (const [symbol, tokenBalance] of Object.entries(rawBalances)) {
+            balances[symbol] = new Decimal(formatUnits(tokenBalance.raw, tokenBalance.decimals));
+        }
+
+        return balances;
+    }
+
+    private async verifyBalances(ctx: ExecutionContext): Promise<boolean> {
+        if (this.config.simulation ?? true) {
+            return true;
+        }
+
+        try {
+            const [actualCex, actualDex] = await Promise.all([
+                this.exchange.fetchBalance(),
+                this.fetchWalletBalances(),
+            ]);
+
+            const [baseRaw, quoteRaw] = ctx.signal.pair.split('/');
+            const base = (baseRaw ?? '').toUpperCase();
+            const quote = (quoteRaw ?? '').toUpperCase();
+            const assets = [base, quote].filter(Boolean);
+            const threshold = new Decimal(0.001);
+            const diffs: string[] = [];
+
+            for (const asset of assets) {
+                const expectedCex = this.inventory.getAvailable(Venue.BINANCE, asset);
+                const expectedDex = this.inventory.getAvailable(Venue.WALLET, asset);
+
+                const actualCexAsset = actualCex[asset]?.free ?? new Decimal(0);
+                const actualDexAsset = new Decimal(actualDex[asset] ?? 0);
+
+                const cexDiff = actualCexAsset.sub(expectedCex).abs();
+                const dexDiff = actualDexAsset.sub(expectedDex).abs();
+
+                if (cexDiff.gt(threshold)) {
+                    diffs.push(`CEX ${asset} diff=${cexDiff.toFixed(6)}`);
+                }
+                if (dexDiff.gt(threshold)) {
+                    diffs.push(`DEX ${asset} diff=${dexDiff.toFixed(6)}`);
+                }
+            }
+
+            if (diffs.length > 0) {
+                const msg = `BALANCE MISMATCH! pair=${ctx.signal.pair} ${diffs.join(' | ')}`;
+                logger.error(msg);
+                this.telegramAlert.send(msg, true);
+                this.stop();
+                return false;
+            }
+
+            return true;
+        } catch (error) {
+            const msg = `Balance verification failed: ${error instanceof Error ? error.message : String(error)}. Stopping bot.`;
+            logger.error(msg);
+            this.telegramAlert.send(msg, true);
+            this.stop();
+            return false;
+        }
+    }
+
+    private updateInventory(ctx: ExecutionContext): void {
+        const signal = ctx.signal;
+        const [baseAsset, quoteAsset] = signal.pair.split('/');
+
+        const toVenue = (venue: string): Venue | null => {
+            if (venue === 'cex') return Venue.BINANCE;
+            if (venue === 'dex') return Venue.WALLET;
+            return null;
+        };
+
+        const isBuyLeg = (venue: string): boolean => {
+            return (
+                (signal.direction === Direction.BUY_CEX_SELL_DEX && venue === 'cex') ||
+                (signal.direction === Direction.BUY_DEX_SELL_CEX && venue === 'dex')
+            );
+        };
+
+        const recordLeg = (
+            legVenue: string | null,
+            legFillSize: number | null,
+            legFillPrice: number | null,
+        ): void => {
+            if (!legVenue || !legFillSize || !legFillPrice) return;
+            if (legFillSize <= 0 || legFillPrice <= 0) return;
+
+            const venue = toVenue(legVenue);
+            if (!venue) return;
+
+            const side: 'buy' | 'sell' = isBuyLeg(legVenue) ? 'buy' : 'sell';
+            const baseAmount = new Decimal(legFillSize);
+            const quoteAmount = baseAmount.mul(legFillPrice);
+
+            const feeBps = venue === Venue.BINANCE ? Config.CEX_TAKER_BPS : Config.DEX_SWAP_BPS;
+            const fee = quoteAmount.mul(feeBps).div(10_000);
+
+            this.inventory.recordTrade(
+                venue,
+                side,
+                baseAsset,
+                quoteAsset,
+                baseAmount,
+                quoteAmount,
+                fee,
+                quoteAsset,
+            );
+        };
+
+        recordLeg(ctx.leg1Venue || null, ctx.leg1FillSize, ctx.leg1FillPrice);
+        recordLeg(ctx.leg2Venue || null, ctx.leg2FillSize, ctx.leg2FillPrice);
     }
 }
 
@@ -395,25 +527,29 @@ async function main(): Promise<void> {
         binanceApiKey: Config.BINANCE_API_KEY,
         binanceSecret: Config.BINANCE_SECRET!,
         pairs: ['ARB/USDC'],
-        tradeSize: 90,
+        tradeSize: 40,
         wsURL: Config.DEX_WS_URL,
         rpcURL: Config.ARBITRUM_RPC,
-        dryRun: true,
+        dryRun: false,
         simulation: !process.env.PRODUCTION,
         debug: false,
         poolAddresses: ['0x011f31D20C8778c8Beb1093b73E3A5690Ee6271b'],
         signalConfig: {
-            min_spread_bps: 1,
-            min_profit_usd: 0,
+            min_spread_bps: 10,
+            min_profit_usd: 0.01,
             cooldown_seconds: 1,
             tokenMap: {
-                ETH: Config.WETH_ADDRESS,
                 USDC: Config.USDC_ADDRESS,
                 ARB: '0x912CE59144191C1204E64559FE8253a0e49E6548',
             },
         },
         riskManagerConfig: {
-            riskLimits: {},
+            riskLimits: {
+                maxTradeUsd: 5,
+                maxLossPerTrade: 5,
+                consecutiveLossLimit: 3,
+                maxTradePct: 0.2,
+            },
             initialCapital: 100,
         },
     };

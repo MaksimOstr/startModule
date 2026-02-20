@@ -4,6 +4,7 @@ import {
     TransactionRequest as EtherTransactionRequest,
     TransactionReceipt as EthersTransactionReceipt,
     FetchRequest,
+    Contract,
 } from 'ethers';
 import { Address } from '../core/types/Address';
 import { TokenAmount } from '../core/types/TokenAmount';
@@ -20,11 +21,29 @@ import {
 import { getLogger } from '../logger';
 
 export class ChainClient {
+    private static ERC20_BALANCE_ABI = [
+        {
+            type: 'function',
+            name: 'balanceOf',
+            stateMutability: 'view',
+            inputs: [{ name: 'owner', type: 'address' }],
+            outputs: [{ name: '', type: 'uint256' }],
+        },
+        {
+            type: 'function',
+            name: 'decimals',
+            stateMutability: 'view',
+            inputs: [],
+            outputs: [{ name: '', type: 'uint8' }],
+        },
+    ];
+
     private providers: JsonRpcProvider[];
     private timeout: number;
     private maxRetries: number;
     private enableLogs: boolean;
     private logger = getLogger('ChainClient');
+    private tokenDecimalsCache: Map<string, number>;
 
     constructor(rpcUrls: string[], timeout = 30, maxRetries = 3, enableLogs = true) {
         if (rpcUrls.length === 0) throw new Error('At least one RPC URL is required');
@@ -36,6 +55,7 @@ export class ChainClient {
         this.timeout = timeout;
         this.maxRetries = maxRetries;
         this.enableLogs = enableLogs;
+        this.tokenDecimalsCache = new Map();
     }
 
     getProvider(): JsonRpcProvider {
@@ -148,6 +168,55 @@ export class ChainClient {
         };
 
         return this.withRetry((provider) => provider.call(txWithBlock), 'call');
+    }
+
+    async fetchBalances(
+        owner: Address,
+        tokenMap: Record<string, string>,
+    ): Promise<Record<string, { raw: bigint; decimals: number }>> {
+        const result: Record<string, { raw: bigint; decimals: number }> = {};
+
+        for (const [rawSymbol, tokenAddress] of Object.entries(tokenMap)) {
+            const symbol = rawSymbol.toUpperCase();
+            if (!tokenAddress) continue;
+
+            try {
+                const token = new Address(tokenAddress);
+                const [raw, decimals] = await Promise.all([
+                    this.withRetry(async (provider) => {
+                        const contract = new Contract(
+                            token.checksum,
+                            ChainClient.ERC20_BALANCE_ABI,
+                            provider,
+                        );
+                        return (await contract.balanceOf(owner.checksum)) as bigint;
+                    }, `fetchBalance:${symbol}`),
+                    this.fetchTokenDecimals(token),
+                ]);
+
+                result[symbol] = { raw, decimals };
+            } catch {
+                result[symbol] = { raw: 0n, decimals: 18 };
+            }
+        }
+
+        return result;
+    }
+
+    private async fetchTokenDecimals(token: Address): Promise<number> {
+        const key = token.lower;
+        const cached = this.tokenDecimalsCache.get(key);
+        if (cached !== undefined) {
+            return cached;
+        }
+
+        const decimals = await this.withRetry(async (provider) => {
+            const contract = new Contract(token.checksum, ChainClient.ERC20_BALANCE_ABI, provider);
+            return Number(await contract.decimals());
+        }, 'fetchTokenDecimals');
+
+        this.tokenDecimalsCache.set(key, decimals);
+        return decimals;
     }
 
     private async withRetry<T>(

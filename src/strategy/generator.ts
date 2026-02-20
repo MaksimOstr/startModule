@@ -89,7 +89,7 @@ export class SignalGenerator {
 
         if (netPnl < this.minProfitUsd.toNumber()) {
             logger.info(
-                `Pair: ${pair}, chosen direction: ${direction}, netPnl: ${netPnl} SKIPPING`,
+                `Pair: ${pair}, chosen direction: ${direction}, netPnl: ${netPnl} is lower than ${this.minProfitUsd.toNumber()} spread: ${spread} SKIPPING`,
             );
             return null;
         }
